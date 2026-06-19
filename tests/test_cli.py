@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import re
 
 from typer.testing import CliRunner
 
@@ -11,32 +12,43 @@ from pgslow.connection import PgslowError
 
 runner = CliRunner()
 
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _plain(text: str) -> str:
+    """Strip ANSI colour codes so substring checks survive rich's styling.
+
+    typer colourises help output when it thinks the terminal supports it (as on
+    CI), which splits flags like ``--order`` across escape sequences.
+    """
+    return _ANSI.sub("", text)
+
 
 def test_root_help_lists_commands():
     result = runner.invoke(cli.app, ["--help"])
     assert result.exit_code == 0
     for command in ("top", "explain", "report", "reset"):
-        assert command in result.output
+        assert command in _plain(result.output)
 
 
 def test_version():
     result = runner.invoke(cli.app, ["--version"])
     assert result.exit_code == 0
-    assert "pgslow" in result.output
+    assert "pgslow" in _plain(result.output)
 
 
 def test_top_help_shows_order_options():
     result = runner.invoke(cli.app, ["top", "--help"])
     assert result.exit_code == 0
-    assert "--order" in result.output
-    assert "--limit" in result.output
+    assert "--order" in _plain(result.output)
+    assert "--limit" in _plain(result.output)
 
 
 def test_explain_help_warns_about_analyze():
     result = runner.invoke(cli.app, ["explain", "--help"])
     assert result.exit_code == 0
-    assert "--analyze" in result.output
-    assert "EXECUTES" in result.output
+    assert "--analyze" in _plain(result.output)
+    assert "EXECUTES" in _plain(result.output)
 
 
 def test_missing_dsn_exits_nonzero():
