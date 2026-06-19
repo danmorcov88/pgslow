@@ -1,0 +1,36 @@
+# Demo Postgres for pgslow, with pg_stat_statements preloaded.
+#
+#   docker compose -f examples/docker-compose.yml up -d
+#
+# Connection string for the tool:
+#   export PGSLOW_DSN=postgresql://pgslow:pgslow@localhost:5432/pgslow_demo
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: pgslow-demo
+    environment:
+      POSTGRES_USER: pgslow
+      POSTGRES_PASSWORD: pgslow
+      POSTGRES_DB: pgslow_demo
+    command:
+      - "postgres"
+      # pg_stat_statements must be loaded at server start.
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      # Track statements nested inside functions/DO blocks too.
+      - "-c"
+      - "pg_stat_statements.track=all"
+      - "-c"
+      - "pg_stat_statements.max=10000"
+    ports:
+      # Override the host port if 5432 is taken: PGSLOW_HOST_PORT=5544 docker compose ... up -d
+      - "${PGSLOW_HOST_PORT:-5432}:5432"
+    volumes:
+      # Runs once on first boot: creates the extension in the demo database.
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pgslow -d pgslow_demo"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
