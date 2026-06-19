@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import psycopg
 import pytest
+from conftest import MARKER_CALLS, MARKER_TEXT
 
 from pgslow import analyzer, collector, explain
 from pgslow.connection import PgslowError, connect
-from tests.conftest import MARKER_CALLS, MARKER_TEXT
 
 pytestmark = pytest.mark.integration
 
